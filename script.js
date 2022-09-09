@@ -5,6 +5,10 @@ let ctx = canvas.getContext("2d");
 canvas.width  = window.innerWidth;
 canvas.height = window.innerHeight;
 
+let height = canvas.height, 
+    width = canvas.width,
+    curSide = 1;
+
 window.requestAnimationFrame(draw);
 
 let particles = [];
@@ -20,8 +24,34 @@ function draw () {
         window.requestAnimationFrame(draw);
     }, 10)
 }
+console.log(curSide);
 
-let particle = new Particle(700, 100);
+setInterval(() => {
+    let xCoord, yCoord;
+    let offset = 100;
+    switch (curSide) {
+        case 1:
+            yCoord = -offset;
+            xCoord = randomNum(0, width);
+            break;
+        case 2:
+            yCoord = randomNum(0, height);
+            xCoord = width + offset;
+            break;
+        case 3:
+            yCoord = height + offset;
+            xCoord = randomNum(0, width);
+            break;
+        case 4:
+            yCoord = randomNum(0, height);
+            xCoord = -offset;            
+            break;
+    }
+    console.log(xCoord, yCoord);
+    curSide = curSide < 4 ? curSide + 1 : 1;
+    new Particle(xCoord, yCoord);
+}, 1000)
+new Particle(700, 100);
 console.log(particles)
 
 function Particle (x, y) {
@@ -35,11 +65,9 @@ function Particle (x, y) {
     this.vY = 0;
     this.curCos = 0;
     this.curSin = 0;
-    this.tale = [];
 
     setInterval(() => {
         this.setVelocities();
-        this.tale.push({x: this.x, y: this.y});
     }, 100)
 
     particles.push(this);
@@ -49,17 +77,6 @@ Particle.prototype.draw = function () {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2, true);
     ctx.stroke();
-    let {tale} = this;
-    for (let key in tale) {
-        let line = tale[key];
-        let line2 = tale[Number(key) + 1];
-        if (key < tale.length - 1) {
-            ctx.beginPath();
-            ctx.moveTo(line.x, line.y)
-            ctx.lineTo(line2.x, line2.y)
-            ctx.stroke();
-        }
-    }
 }
 Particle.prototype.move = function () {
     this.x -= this.vX;
@@ -106,4 +123,31 @@ function mousemoveHandler(e) {
 
 function getDistance (x1, y1, x2, y2) {
     return Math.sqrt((x2- x1) ** 2 + (y2- y1) ** 2);
+}
+
+function randomNum (min, max) {
+    return Math.floor(Math.random() * (max - min + 1) ) + min;
+}
+
+prototypeFunction(Array, 'shuffleArray', function () {
+    let result = [];
+    while (this.length != 0) {
+        result.push(...this.splice(random(this), 1));
+    }
+    return result;
+
+    function random(arr) {
+        return Math.floor(Math.random() * arr.length);
+    }
+});
+prototypeFunction(Array, 'randomElement', function () {
+    return this[Math.floor(Math.random() * this.length)];
+})
+prototypeFunction(Array, 'randomIndex', function () {
+    return Math.floor(Math.random() * this.length);
+})
+function prototypeFunction (type, name, func) {
+    Object.defineProperty(type['prototype'], name, {
+        value: func
+    });
 }
