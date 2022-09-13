@@ -4,6 +4,10 @@ let canvas = document.getElementById('canvas');
 let ctx = canvas.getContext("2d");
 canvas.width  = window.innerWidth;
 canvas.height = window.innerHeight;
+let ids = {
+    p: 0,
+    s: 0,
+}
 
 let height = canvas.height, 
     width = canvas.width,
@@ -12,19 +16,23 @@ let height = canvas.height,
 window.requestAnimationFrame(draw);
 
 let particles = [];
+let stars = [];
 
 function draw () {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     for (let particle of particles) {
         particle.draw();
         particle.move();
+        particle.checkNearbyParticles();
+    }
+    for (let star of stars) {
+        star.draw();
     }
     
     setTimeout(() => {
         window.requestAnimationFrame(draw);
     }, 10)
 }
-console.log(curSide);
 
 setInterval(() => {
     let xCoord, yCoord;
@@ -32,43 +40,52 @@ setInterval(() => {
     switch (curSide) {
         case 1:
             yCoord = -offset;
-            xCoord = randomNum(0, width);
+            xCoord = getRandomInt(0, width);
             break;
         case 2:
-            yCoord = randomNum(0, height);
+            yCoord = getRandomInt(0, height);
             xCoord = width + offset;
             break;
         case 3:
             yCoord = height + offset;
-            xCoord = randomNum(0, width);
+            xCoord = getRandomInt(0, width);
             break;
         case 4:
-            yCoord = randomNum(0, height);
+            yCoord = getRandomInt(0, height);
             xCoord = -offset;            
             break;
     }
-    console.log(xCoord, yCoord);
     curSide = curSide < 4 ? curSide + 1 : 1;
     new Particle(xCoord, yCoord);
 }, 1000)
-new Particle(700, 100);
 console.log(particles)
 
 function Particle (x, y) {
     this.x = x;
     this.y = y;
     this.r = 20;
-    this.tX = canvas.width / 2;
-    this.tY = canvas.height / 2;
+    this.tX;
+    this.tY;
     this.speed = 2;
     this.vX = 0;
     this.vY = 0;
     this.curCos = 0;
     this.curSin = 0;
+    this.occupied = false;
+    this.id = ids.p;
+    ids.p += 1;
+    this.canConnect = false;
 
     setInterval(() => {
         this.setVelocities();
     }, 100)
+    this.mouseUpdateInterval = setInterval(() => {
+        this.tX = mouseX;
+        this.tY = mouseY;
+    }, 100)
+    setTimeout(() => {
+        this.canConnect = true;
+    }, 2000)
 
     particles.push(this);
 }
@@ -87,7 +104,7 @@ Particle.prototype.setVelocities = function () {
     let {x, y, tX, tY} = this;
     let [x1, y1] = [x, y];
     // angle in rad
-    let angle = Math.atan2(y1-mouseY, x1-mouseX);
+    let angle = Math.atan2(y1-tY, x1-tX);
     let sin = Math.sin(angle);
     let cos = Math.cos(angle);
     // console.log('sin: ' + sin + ' cos: ' + cos);
@@ -111,10 +128,47 @@ Particle.prototype.setVelocities = function () {
     this.vX = this.curCos * this.speed;
     this.vY = this.curSin * this.speed;
 }
+Particle.prototype.checkNearbyParticles = function () {
+    if (this.occupied || !this.canConnect) return
+    let {x, y} = this;
+    let [x1, y1] = [x, y];
+    if (!isOnScreen(x, y)) return
 
+    for (let p of particles) {
+        if (p.id == this.id || p.occupied) continue
 
-let mouseX = 0;
-let mouseY = 0;
+        let [x2, y2] = [p.x, p.y];
+        if (getDistance(x1, y1, x2, y2) < 100) {
+            let midPoint = getMidpoint(x1, y1, x2, y2);
+            p.resetBeforeStarConnection(midPoint.x, midPoint.y);
+            this.resetBeforeStarConnection(midPoint.x, midPoint.y);
+            new Star(midPoint.x, midPoint.y)
+            return;
+        }
+    }
+}
+Particle.prototype.resetBeforeStarConnection = function (x, y) {
+    clearInterval(this.mouseUpdateInterval);
+    this.occupied = true;
+    this.tX = x;
+    this.tY = y;
+}
+function Star (x, y) {
+    this.x = x;
+    this.y = y;
+    this.r = 100;
+
+    stars.push(this);
+}
+Star.prototype.draw = function () {
+    let {x, y, r} = this;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2, true);
+    ctx.stroke();
+}
+
+let mouseX = canvas.width / 2;
+let mouseY = canvas.height / 2;
 window.addEventListener('mousemove', mousemoveHandler, false);
 function mousemoveHandler(e) {
     mouseX = e.clientX;
@@ -124,8 +178,14 @@ function mousemoveHandler(e) {
 function getDistance (x1, y1, x2, y2) {
     return Math.sqrt((x2- x1) ** 2 + (y2- y1) ** 2);
 }
+function getMidpoint (x1, y1, x2, y2) {
+    return {x: (x2 + x1) / 2, y: (y2 + y1) / 2};
+}
+function isOnScreen (x, y) {
+    return x > 0 && y > 0 && x < width && y < height;
+}
 
-function randomNum (min, max) {
+function getRandomInt (min, max) {
     return Math.floor(Math.random() * (max - min + 1) ) + min;
 }
 
