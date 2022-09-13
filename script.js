@@ -27,6 +27,7 @@ function draw () {
     }
     for (let star of stars) {
         star.draw();
+        star.checkNearbyParticles();
     }
     
     setTimeout(() => {
@@ -140,14 +141,14 @@ Particle.prototype.checkNearbyParticles = function () {
         let [x2, y2] = [p.x, p.y];
         if (getDistance(x1, y1, x2, y2) < 100) {
             let midPoint = getMidpoint(x1, y1, x2, y2);
-            p.resetBeforeStarConnection(midPoint.x, midPoint.y);
-            this.resetBeforeStarConnection(midPoint.x, midPoint.y);
+            p.connectToStar(midPoint.x, midPoint.y);
+            this.connectToStar(midPoint.x, midPoint.y);
             new Star(midPoint.x, midPoint.y)
             return;
         }
     }
 }
-Particle.prototype.resetBeforeStarConnection = function (x, y) {
+Particle.prototype.connectToStar = function (x, y) {
     clearInterval(this.mouseUpdateInterval);
     this.occupied = true;
     this.tX = x;
@@ -156,7 +157,7 @@ Particle.prototype.resetBeforeStarConnection = function (x, y) {
 function Star (x, y) {
     this.x = x;
     this.y = y;
-    this.r = 100;
+    this.r = 40;
 
     stars.push(this);
 }
@@ -165,6 +166,20 @@ Star.prototype.draw = function () {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2, true);
     ctx.stroke();
+}
+Star.prototype.checkNearbyParticles = function () {
+    let {x, y} = this;
+    let [x1, y1] = [x, y];
+
+    for (let p of particles) {
+        if (p.occupied) continue
+
+        let [x2, y2] = [p.x, p.y];
+        if (getDistance(x1, y1, x2, y2) < 100) {
+            this.r += 5;
+            p.connectToStar(x1, y1);
+        }
+    }
 }
 
 let mouseX = canvas.width / 2;
