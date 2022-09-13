@@ -26,6 +26,7 @@ function draw () {
         particle.checkNearbyParticles();
     }
     for (let star of stars) {
+        star.updateRadius();
         star.draw();
         star.checkNearbyParticles();
     }
@@ -153,11 +154,22 @@ Particle.prototype.connectToStar = function (x, y) {
     this.occupied = true;
     this.tX = x;
     this.tY = y;
+
+    let id = this.id;
+    setTimeout(() => {
+        particles = particles.filter((p) => {
+            return p.id != id; 
+        })
+    }, 1000)
 }
 function Star (x, y) {
     this.x = x;
     this.y = y;
     this.r = 40;
+    this.isFull = false;
+    this.particlesAmount = 2;
+    this.id = ids.s;
+    ids.s += 1;
 
     stars.push(this);
 }
@@ -168,6 +180,8 @@ Star.prototype.draw = function () {
     ctx.stroke();
 }
 Star.prototype.checkNearbyParticles = function () {
+    if (this.isFull) return
+
     let {x, y} = this;
     let [x1, y1] = [x, y];
 
@@ -176,9 +190,37 @@ Star.prototype.checkNearbyParticles = function () {
 
         let [x2, y2] = [p.x, p.y];
         if (getDistance(x1, y1, x2, y2) < 100) {
-            this.r += 5;
+            this.r += 10;
+            this.particlesAmount += 1;
             p.connectToStar(x1, y1);
         }
+    }
+    if (this.particlesAmount >= 5) {
+        this.isFull = true;
+        this.startExplosion();
+    }
+}
+Star.prototype.startExplosion = function () {
+    this.steps = [];
+    let {r} = this;
+    for (let i = r; i < r + 100; i += 10) {
+        this.steps.push(i)
+    }
+    for (let i = r + 100; i > 0; i -= 2) {
+        this.steps.push(i)
+    }
+}
+Star.prototype.updateRadius = function () {
+    if (!this.isFull) return
+
+    let {id} = this;
+    this.r = this.steps.shift();
+    if (this.steps.length == 0) {
+        console.log(id);
+        let p = new Particle(this.x, this.y);
+        stars = stars.filter((s) => {
+            return s.id != id; 
+        })
     }
 }
 
