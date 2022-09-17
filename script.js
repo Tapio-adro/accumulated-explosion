@@ -20,11 +20,14 @@ let stars = [];
 
 function draw () {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.save();
+    setParticleStyles();
     for (let particle of particles) {
         particle.draw();
         particle.move();
         particle.checkNearbyParticles();
     }
+    ctx.restore();
     for (let star of stars) {
         star.updateRadius();
         star.draw();
@@ -34,6 +37,9 @@ function draw () {
     setTimeout(() => {
         window.requestAnimationFrame(draw);
     }, 10)
+}
+function setParticleStyles () {
+    ctx.fillStyle = '#33ccff';
 }
 
 setInterval(() => {
@@ -77,8 +83,10 @@ function Particle (x, y) {
     this.id = ids.p;
     ids.p += 1;
     this.canConnect = false;
+    this.tale = [];
 
     setInterval(() => {
+        this.updateTale();
         this.setVelocities();
     }, 100)
     this.mouseUpdateInterval = setInterval(() => {
@@ -95,7 +103,25 @@ Particle.prototype.draw = function () {
     let {x, y, r} = this;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2, true);
-    ctx.stroke();
+    ctx.fill();
+
+    for (let key in this.tale) {
+        let part = this.tale[key];
+        let size = 0.5 + key / 10;
+        let radius = r * size;
+        ctx.globalAlpha = size;
+        ctx.beginPath();
+        ctx.arc(part.x, part.y, radius, 0, Math.PI * 2, true);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+Particle.prototype.updateTale = function () {
+    let {x, y} = this;
+    this.tale.push({x, y});
+    if (this.tale.length > 5) {
+        this.tale.shift();
+    }   
 }
 Particle.prototype.move = function () {
     this.x -= this.vX;
@@ -160,7 +186,7 @@ Particle.prototype.connectToStar = function (x, y) {
         particles = particles.filter((p) => {
             return p.id != id; 
         })
-    }, 1000)
+    }, 3000)
 }
 function Star (x, y) {
     this.x = x;
